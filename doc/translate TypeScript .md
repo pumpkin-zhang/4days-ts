@@ -433,3 +433,150 @@ function logValue(x: Date | string) {
 }
 ```
 
+
+
+## 关于函数
+
+说明：关于函数的一些拓展。就是不同入参的一些写法和处理方式（我的理解）
+
+- 函数表达式
+
+  描述函数的最简单方法是使用函数类型表达式。这些类型在语法上类似于箭头函数：
+
+  ```js
+  // 接收一个为函数的参数并调用 void --> 无返回
+  function greeter(fn: (a: string) => void) {
+    fn("Hello, World");
+  }
+   
+  function printToConsole(s: string) {
+    console.log(s);
+  }
+   
+  greeter(printToConsole);
+  ```
+
+- 呼叫签名
+
+  官方原文：在 JavaScript 中，函数除了可调用之外还可以有属性。但是，函数类型表达式语法不允许声明属性。如果我们想用属性来描述一些可调用的东西，我们可以在对象类型中写一个*调用签名*
+
+  我的理解：就是可以给函数传入一个数据类型为对象的参数
+
+  ```js
+  type DescribableFunction = {
+    description: string;
+    (someArg: number): boolean;
+  };
+  function doSomething(fn: DescribableFunction) {
+    console.log(fn.description + " returned " + fn(6));
+  }
+  ```
+
+  
+
+- 构造签名
+
+  官方原文：JavaScript 函数也可以使用`new`运算符调用。TypeScript 将这些称为*构造函数，*因为它们通常会创建一个新对象。您可以通过在调用签名前添加关键字来编写*构造*`new`签名。
+
+  我的理解：入参可以是一个构造函数，同时，函数内部支持new关键字
+
+  ```js
+  type SomeConstructor = {
+    new (s: string): SomeObject;
+  };
+  function fn(ctor: SomeConstructor) {
+    return new ctor("hello");
+  }
+  ```
+
+  
+
+- 通用函数
+
+  当一个函数输出与输入的类型有联系时，可使用泛型，此时返回的数据类型不会是默认的any
+
+  注意，我们不必`Type`在此示例中指定。类型由 TypeScript*推断*- 自动选择
+
+  ```js
+  // 这种方式，虽函数的功能实现了，但是返回的数据类型会是一个any
+  function firstElement(arr: any[]) {
+    return arr[0];
+  }
+  
+  function firstElement<Type>(arr: Type[]): Type | undefined {
+    return arr[0];
+  }
+  
+  // 通过向Type这个函数添加一个类型参数并在两个地方使用它，我们在函数的输入（数组）和输出（返回值）之间创建了一个链接。现在当我们调用它时，会出现一个更具体的类型：
+  // s is of type 'string'
+  const s = firstElement(["a", "b", "c"]);
+  // n is of type 'number'
+  const n = firstElement([1, 2, 3]);
+  // u is of type undefined
+  const u = firstElement([]);
+  ```
+
+  
+
+- 约束
+
+  官方原文：我们编写了一些通用函数，可以处理*任何*类型的值。有时我们想关联两个值，但只能对某个值的子集进行操作。在这种情况下，我们可以使用*约束*来限制类型参数可以接受的类型种类
+
+  我的理解：当入参的约束条件比较多时，可以利用extends对参数进行约束
+
+  ```js
+  // 约束参数要有length属性才可
+  function longest<Type extends { length: number }>(a: Type, b: Type) {
+    if (a.length >= b.length) {
+      return a;
+    } else {
+      return b;
+    }
+  }
+   
+  // longerArray is of type 'number[]'
+  const longerArray = longest([1, 2], [1, 2, 3]);
+  // longerString is of type 'alice' | 'bob'
+  const longerString = longest("alice", "bob");
+  // Error! Numbers don't have a 'length' property
+  const notOK = longest(10, 100);
+  ```
+
+  
+
+- 指定类型参数
+
+  当入参可能是多种数据类型时，ts的类型推断可能不准确，此时需要手动制定类型
+
+  ```js
+  function combine<Type>(arr1: Type[], arr2: Type[]): Type[] {
+    return arr1.concat(arr2);
+  }
+  const arr = combine([1, 2, 3], ["hello"]) // 'hello' 报错：Type 'string' is not assignable to type 'number'
+  
+  // 手动指定类型即可
+  const arr = combine<string | number>([1, 2, 3], ["hello"])
+  ```
+
+  
+
+- 一些其他类型
+  - void：表示没有返回就，即没有return
+  - object：特殊类型`object`是指任何非原始值（`string`、`number`、`bigint`、`boolean`、`symbol`、`null`、 或`undefined`）
+  - unknow：表示任何值。这类似于`any`类型，但更安全，因为对`unknown`值执行任何操作都是不合法的
+  - never：表示从未观察到的值。在返回类型中，这意味着函数抛出异常或终止程序的执行
+  - function：描述了 JavaScript 中所有函数值上存在的属性，如`bind`、`call`、`apply`和其他属性
+
+- 休息参数
+
+  可以使用*剩余参数*定义具有*无限*数量参数的*函数*。
+
+  ```js
+  function multiply(n: number, ...m: number[]) {
+    return m.map((x) => n * x);
+  }
+  // 'a' gets value [10, 20, 30, 40]
+  const a = multiply(10, 1, 2, 3, 4);
+  ```
+
+  
